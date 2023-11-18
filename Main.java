@@ -6,7 +6,7 @@ import java.awt.*;
 public class Main {
     static ArrayList<Product> katalog = new ArrayList<>();
     static ArrayList<VarukorgArtikel> varukorg = new ArrayList<>();
-    static boolean isAdmin = false; // Kontrollerar om användaren är admin eller inte
+    static boolean isAdmin = false; // Håller koll om användaren är admin eller inte och sätter de false.
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
@@ -82,7 +82,7 @@ public class Main {
     private static void login() {
         Scanner scanner = new Scanner(System.in);
 
-        System.out.println("Vill du logga in som admin eller kund? (admin/kund): ");
+        System.out.println("Vill du logga in som admin eller kund? Skriv 'admin' eller tryck in enter: ");
         String userType = scanner.nextLine().toLowerCase();
 
         isAdmin = userType.equals("admin");
@@ -92,7 +92,7 @@ public class Main {
         } else {
             System.out.println("Du är inloggad som en kund");
         }
-    }
+    } //Här kan jag lägga till så att man skriver in kod efter "admin"
 
 
     private static void addToVarukorg() {
@@ -109,16 +109,44 @@ public class Main {
                 break;
             }
         }
+
         if (selectedProduct == null) {
             System.out.println("Produkten hittades inte i katalogen.");
         } else {
             System.out.println("Ange antal av mängd av produkten att lägga till i varukorgen: ");
             int quantity = input.nextInt();
 
-            // Här skapar vi ny VarukorgArtikel
-            VarukorgArtikel varukorgArtikel = new VarukorgArtikel(selectedProduct, quantity);
-            varukorg.add(varukorgArtikel);
-            System.out.println(quantity + " st av " + productName + " har lagts till i varukorgen.");
+            // Feedback, fixa så att när man uppfyller kraven för rea så separerar det från den ordinära priset.
+            int discountQuantity = 0; // Produkter I rea
+            int regularQuantity; // Produkter I normala pris
+
+            if (selectedProduct.getSalePrice() > 0 && quantity >= selectedProduct.getSaleQuantity()) {
+                int saleQuantity = selectedProduct.getSaleQuantity();
+                int remainingQuantity = quantity;
+                while (remainingQuantity >= saleQuantity) {
+                    discountQuantity += saleQuantity;
+                    remainingQuantity -= saleQuantity;
+                }
+                regularQuantity = remainingQuantity;
+            } else {
+                regularQuantity = quantity;
+            }
+
+            // Här skapar vi ny Varukorgartikel för produkter på rea eller ordinära pris.
+            if (discountQuantity > 0 || regularQuantity > 0) {
+                VarukorgArtikel cartItem = new VarukorgArtikel(selectedProduct, quantity);
+                varukorg.add(cartItem);
+
+                double regularTotalPrice = regularQuantity * selectedProduct.getPrice();
+                double discountTotalPrice = discountQuantity * selectedProduct.getSalePrice();
+
+                System.out.println(quantity + " st av " + productName + " har lagts till i varukorgen.");
+                System.out.println("Ordinarie pris: " + String.format("%.2f kr", regularTotalPrice));
+
+                if (discountQuantity > 0) {
+                    System.out.println("På rea: " + String.format("%.2f kr (REA! %d st för %.2f kr/st)", discountTotalPrice, selectedProduct.getSaleQuantity(), selectedProduct.getSalePrice()));
+                }
+            }
         }
     }
 
@@ -220,7 +248,34 @@ public class Main {
     private static void displayVarukorg() {
         System.out.println("Varukorgen:");
         for (VarukorgArtikel varukorgArtikel : varukorg) {
-            System.out.println(varukorgArtikel.toString());
+            Product product = varukorgArtikel.getProduct();
+            int quantity = varukorgArtikel.getQuantity();
+            double totalPrice = varukorgArtikel.getTotalPrice();
+
+            if (product.getSalePrice() > 0) {
+                int saleQuantity = product.getSaleQuantity();
+                int discountQuantity = quantity / saleQuantity;
+                int remainingQuantity = quantity % saleQuantity;
+
+                double totalCost = (discountQuantity * product.getSalePrice());
+
+                // Kontrollera om det finns produkter som inte omfattas av rabatten.
+                if (remainingQuantity > 0) {
+                    double extraCost = remainingQuantity * product.getPrice();
+                    totalCost += extraCost;
+                    System.out.println(quantity + "st " + product.getName() +
+                            " (Detta produkt är på REA! " + String.format("%.2f kr/st vid köp av minst %d st)" +
+                                    " Totalt: %.2f kr (Det tillkommer extra kostnad för %d extra st som är inte behörig för rabatt.)",
+                            product.getSalePrice(), product.getSaleQuantity(), totalCost, remainingQuantity));
+                } else {
+                    System.out.println(quantity + "st " + product.getName() +
+                            " (Detta produkt är på REA! " + String.format("%.2f kr/st vid köp av minst %d st)" + " Totalt: %.2f kr",
+                            product.getSalePrice(), product.getSaleQuantity(), totalCost));
+                }
+            } else {
+                System.out.println(quantity + "st " + product.getName() +
+                        " (Ordinarie pris " + String.format("%.2f kr/st) " + "Totalt: %.2f kr", product.getPrice(), totalPrice));
+            }
         }
     }
     private static void addSaleToProduct() {
@@ -242,9 +297,9 @@ public class Main {
         if (selectedProduct == null) {
             System.out.println("Produkten hittades inte i katalogen.");
         } else {
-            System.out.println("Ange rea-pris: ");
+            System.out.println("Ange det nya priset: ");
             double salePrice = input.nextDouble();
-            System.out.println("Ange rea-mängd (t.ex 2 för 20kr)");
+            System.out.println("Ange antal produkter man måste köpa för rea: (t.ex 2 för 20kr)");
             int saleQuantity = input.nextInt();
             selectedProduct.setSale(salePrice, saleQuantity);
 

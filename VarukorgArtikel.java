@@ -18,19 +18,15 @@ public class VarukorgArtikel {
     }
 
     public double getTotalPrice() {
-        return quantity * calculatePrice();
+        return quantity * product.getPrice();
     }
 
-    public double calculatePrice() {
+    public double getTotalPriceWithDiscount() {
         if (product.getSalePrice() > 0 && quantity >= product.getSaleQuantity()) {
-            return product.getSalePrice();
+            int discountQuantity = quantity / product.getSaleQuantity();
+            int regularQuantity = quantity % product.getSaleQuantity();
+            return (discountQuantity * product.getSalePrice()) + (regularQuantity * product.getPrice());
         } else {
-            return product.getPrice();
+            return getTotalPrice(); // Ingen discount ge de normala värdet.
         }
-    }
-
-    @Override
-    public String toString() {
-        return String.format("%s | Antal: %d | Pris: %.2f kr", product.getName(), quantity, getTotalPrice());
-    }
-}
+    }}
